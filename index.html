@@ -1,204 +1,649 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Love QR Code Generator & Downloader</title>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>HeartScan - Create QR Codes with a Heart</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-
-  <!-- QRCode.js Library -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-  <!-- html2canvas: Paling penting untuk membolehkan muat turun bentuk hati (capture design) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-  <!-- Iconify CDN (Menggantikan fail mdi:heart.svg tempatan untuk elak ralat 404) -->
-  <script src="https://code.iconify.design/iconify-icon/1.0.8/iconify-icon.min.js"></script>
-
-  <style>
-    /* Rekabentuk Masking & Kesan Bentuk Hati (Love QR) */
-    .heart-container {
-      position: relative;
-      width: 260px;
-      height: 260px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #fff;
-      padding: 20px;
-      border-radius: 24px;
-      box-shadow: 0 10px 25px rgba(244, 63, 94, 0.15);
-    }
-
-    .heart-mask {
-      width: 220px;
-      height: 220px;
-      position: relative;
-      /* Topeng bentuk hati untuk memotong kod QR biasa menjadi bentuk "Love" */
-      clip-path: url(#heart-clip);
-      -webkit-clip-path: url(#heart-clip);
-      background-color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    /* Memastikan QR Code yang dijana memenuhi ruang bentuk hati */
-    #qrcode canvas, #qrcode img {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover;
-    }
-
-    /* Frame hiasan luar berbentuk hati (outline merah) */
-    .heart-border-svg {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 10;
-    }
-  </style>
-</head>
-<body class="bg-rose-50 min-h-screen flex items-center justify-center p-4">
-
-  <!-- SVG ClipPath & Overlay (Sangat kritikal untuk membentuk & menghias Love QR) -->
-  <svg width="0" height="0" style="position: absolute;">
-    <defs>
-      <!-- Skala 0.0036 digunakan untuk menyesuaikan koordinat path kepada saiz 220px secara dinamik -->
-      <clipPath id="heart-clip" clipPathUnits="objectBoundingBox">
-        <path d="M0.5,0.92 C0.43,0.85 0.03,0.52 0.01,0.32 C-0.02,0.14 0.11,0 0.28,0 C0.39,0 0.46,0.06 0.5,0.12 C0.54,0.06 0.61,0 0.72,0 C0.89,0 1.02,0.14 0.99,0.32 C0.97,0.52 0.57,0.85 0.5,0.92 Z" />
-      </clipPath>
-    </defs>
-  </svg>
-
-  <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-xl max-w-md w-full text-center border border-rose-100">
-    <!-- Header -->
-    <div class="flex items-center justify-center gap-2 mb-2">
-      <h1 class="text-2xl font-black text-rose-600 tracking-tight">KOD QR LOVE</h1>
-      <iconify-icon icon="mdi:heart" class="text-rose-500 text-3xl animate-pulse"></iconify-icon>
-    </div>
-    <p class="text-xs text-slate-500 mb-6 font-medium">Jana dan muat turun kod QR romantis berbentuk hati anda.</p>
-
-    <!-- Ruang Input & Butang -->
-    <div class="space-y-4 text-left">
-      <div>
-        <label for="qr-input" class="block text-[11px] font-bold uppercase tracking-wider text-rose-500 mb-1">
-          Pautan / Teks Utama
-        </label>
-        <input 
-          type="text" 
-          id="qr-input" 
-          placeholder="https://kekasihmu.com" 
-          value="https://github.com/imaninaramly/qrcode"
-          class="w-full px-4 py-2.5 rounded-xl border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-sm bg-rose-50/30"
-        />
-      </div>
-
-      <button 
-        type="button"
-        onclick="generateLoveQR()" 
-        class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-4 rounded-xl transition duration-200 shadow-md shadow-rose-200 text-sm"
-      >
-        Jana Kod QR Love ❤️
-      </button>
-    </div>
-
-    <!-- Kotak Paparan & Cetakan Gambar Love QR Code -->
-    <div class="my-6 flex items-center justify-center">
-      <!-- DOM Element ini yang akan ditangkap (screenshot) oleh html2canvas untuk dimuat turun -->
-      <div id="capture-area" class="heart-container">
-        <!-- Bingkai SVG Merah Jambu Hati di Luar QR -->
-        <svg class="heart-border-svg" viewBox="0 0 100 100">
-          <path d="M50,90 C43,83 3,50 1,30 C-2,12 11,0 28,0 C39,0 46,6 50,12 C54,6 61,0 72,0 C89,0 102,12 99,30 C97,50 57,83 50,90 Z" 
-                fill="none" 
-                stroke="#f43f5e" 
-                stroke-width="5" 
-                stroke-linejoin="round"
-                transform="scale(0.85) translate(8, 8)" />
-        </svg>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "inverse-primary": "#ffaeda",
+                      "surface": "#fbf9f5",
+                      "tertiary-container": "#ffa8bd",
+                      "background": "#fbf9f5",
+                      "on-secondary-fixed": "#2f1409",
+                      "on-secondary-container": "#795244",
+                      "on-tertiary-fixed": "#3f0019",
+                      "on-primary-container": "#78395f",
+                      "on-tertiary-fixed-variant": "#8e0542",
+                      "on-background": "#1b1c1a",
+                      "primary-fixed": "#ffd8ea",
+                      "surface-container-highest": "#e4e2de",
+                      "tertiary-fixed": "#ffd9e0",
+                      "on-surface-variant": "#514349",
+                      "on-primary-fixed": "#3a0329",
+                      "secondary-fixed": "#ffdbce",
+                      "surface-variant": "#e4e2de",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "surface-container-low": "#f5f3ef",
+                      "primary-container": "#f9a8d4",
+                      "surface-container": "#efeeea",
+                      "secondary-container": "#fdc9b6",
+                      "tertiary-fixed-dim": "#ffb1c3",
+                      "on-primary-fixed-variant": "#6f3157",
+                      "surface-dim": "#dbdad6",
+                      "on-tertiary": "#ffffff",
+                      "on-tertiary-container": "#99124a",
+                      "error-container": "#ffdad6",
+                      "secondary": "#7c5546",
+                      "outline": "#83737a",
+                      "primary": "#8a486f",
+                      "on-error": "#ffffff",
+                      "secondary-fixed-dim": "#eebba9",
+                      "surface-container-high": "#eae8e4",
+                      "on-error-container": "#93000a",
+                      "surface-bright": "#fbf9f5",
+                      "on-surface": "#1b1c1a",
+                      "error": "#ba1a1a",
+                      "primary-fixed-dim": "#ffaeda",
+                      "on-secondary": "#ffffff",
+                      "outline-variant": "#d5c1c9",
+                      "inverse-surface": "#30312e",
+                      "inverse-on-surface": "#f2f0ed",
+                      "tertiary": "#af275a",
+                      "surface-tint": "#8a486f",
+                      "on-secondary-fixed-variant": "#623e31"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin": "32px",
+                      "xl": "80px",
+                      "md": "24px",
+                      "gutter": "24px",
+                      "sm": "12px",
+                      "base": "8px",
+                      "xs": "4px",
+                      "lg": "48px"
+              },
+              "fontFamily": {
+                      "headline-xl": ["Plus Jakarta Sans"],
+                      "body-md": ["Be Vietnam Pro"],
+                      "headline-md": ["Plus Jakarta Sans"],
+                      "headline-lg": ["Plus Jakarta Sans"],
+                      "label-md": ["Plus Jakarta Sans"],
+                      "headline-lg-mobile": ["Plus Jakarta Sans"],
+                      "body-lg": ["Be Vietnam Pro"]
+              },
+              "fontSize": {
+                      "headline-xl": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                      "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(138, 72, 111, 0.05);
+        }
         
-        <!-- Masking di dalam untuk memotong QR menjadi bentuk hati -->
-        <div class="heart-mask">
-          <div id="qrcode" class="w-full h-full flex items-center justify-center"></div>
-        </div>
-      </div>
-    </div>
+        .squish-shadow {
+            box-shadow: 0 4px 14px 0 rgba(249, 168, 212, 0.39), 0 8px 10px -5px rgba(138, 72, 111, 0.2);
+        }
 
-    <!-- Butang Download -->
-    <button 
-      type="button"
-      id="btn-download"
-      onclick="downloadLoveQR()" 
-      class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-4 rounded-xl transition duration-200 shadow-lg flex items-center justify-center gap-2 text-sm"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-      </svg>
-      Muat Turun Gambar (PNG)
+        .gradient-text {
+            background: linear-gradient(135deg, var(--theme-primary, #8a486f) 0%, var(--theme-secondary, #f9a8d4) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .floating-anim {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .blob-bg {
+            position: absolute;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        .preview-container {
+            position: relative;
+            width: 100%;
+            max-width: 320px;
+            aspect-ratio: 1/1;
+        }
+
+        #qrcode-preview svg {
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 12px;
+        }
+
+        .icon-fill-1 { font-variation-settings: 'FILL' 1; }
+        .icon-size-16 { font-size: 16px; }
+        .icon-size-18 { font-size: 18px; }
+        .icon-size-20 { font-size: 20px; }
+        .icon-size-24 { font-size: 24px; }
+        .icon-size-32 { font-size: 32px; }
+        .icon-size-64 { font-size: 64px; font-variation-settings: 'wght' 200; }
+        .bounce-duration-3s { animation-duration: 3s; }
+        .radial-dots {
+            background-image: radial-gradient(#8a486f 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        :root {
+            --theme-primary: #8a486f;
+            --theme-secondary: #f9a8d4;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md overflow-x-hidden min-h-screen flex flex-col relative">
+
+<div class="blob-bg bg-primary-container w-[500px] h-[500px] rounded-full top-[-100px] left-[-100px]"></div>
+<div class="blob-bg bg-tertiary-container w-[400px] h-[400px] rounded-full top-[20%] right-[-50px] opacity-40"></div>
+<div class="blob-bg bg-secondary-fixed w-[600px] h-[600px] rounded-full bottom-[-200px] left-[20%] opacity-30"></div>
+
+<nav class="w-full sticky top-0 z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-md shadow-sm border-b border-white/40 dark:border-outline-variant/20">
+<div class="flex justify-between items-center h-20 px-margin max-w-7xl mx-auto">
+<div class="flex items-center gap-sm cursor-pointer" onclick="window.location.reload()">
+<span class="material-symbols-outlined text-primary icon-fill-1 target-primary-color">favorite</span>
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim target-primary-text">HeartScan</span>
+</div>
+<div class="hidden md:flex items-center gap-md">
+<a class="font-label-md text-label-md text-primary dark:text-primary-fixed-dim border-b-2 border-primary font-bold hover:bg-primary-container/20 transition-colors duration-300 px-sm py-xs rounded-t-sm active:scale-95 transition-transform target-primary-border target-primary-text" href="#" onclick="scrollToSection('generator')">Generate</a>
+<a class="font-label-md text-label-md text-on-surface-variant dark:text-on-surface-variant hover:text-primary hover:bg-primary-container/20 transition-colors duration-300 px-sm py-xs rounded-sm active:scale-95 transition-transform" href="#" onclick="triggerFeatureNotice('History')">History</a>
+<a class="font-label-md text-label-md text-on-surface-variant dark:text-on-surface-variant hover:text-primary hover:bg-primary-container/20 transition-colors duration-300 px-sm py-xs rounded-sm active:scale-95 transition-transform" href="#" onclick="scrollToSection('generator')">Customizer</a>
+<a class="font-label-md text-label-md text-on-surface-variant dark:text-on-surface-variant hover:text-primary hover:bg-primary-container/20 transition-colors duration-300 px-sm py-xs rounded-sm active:scale-95 transition-transform" href="#" onclick="triggerFeatureNotice('Pricing')">Pricing</a>
+</div>
+<button onclick="triggerSignIn()" class="hidden md:flex items-center justify-center bg-primary text-on-primary font-label-md text-label-md px-md py-sm rounded-full squish-shadow hover:opacity-90 transition-all active:scale-95 target-primary-bg">
+                Sign In
+            </button>
+<button class="md:hidden text-primary target-primary-color" onclick="triggerFeatureNotice('Mobile Menu')">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</nav>
+
+<main class="flex-grow w-full max-w-7xl mx-auto px-margin md:px-xl relative z-10 flex flex-col items-center">
+<section class="w-full flex flex-col md:flex-row items-center justify-between py-lg md:py-xl mt-lg gap-lg">
+<div class="w-full md:w-1/2 flex flex-col items-start gap-md text-center md:text-left">
+<div class="inline-flex items-center gap-2 bg-secondary-fixed/50 px-sm py-xs rounded-full border border-secondary-fixed cursor-pointer">
+<span class="material-symbols-outlined text-secondary icon-size-16">auto_awesome</span>
+<span class="font-label-md text-label-md text-on-secondary-container">Custom Center Icon QR Available! ✨</span>
+</div>
+<h1 class="font-headline-xl text-headline-lg-mobile md:text-headline-xl text-on-surface">
+                Create QR Codes with a <span class="gradient-text">Heart</span>
+</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-md mx-auto md:mx-0">
+                    Transform boring links into beautiful, scannable art. Add a touch of charm to your menus, invites, and business cards in seconds.
+                </p>
+<div class="flex flex-col sm:flex-row items-center gap-sm mt-sm w-full md:w-auto">
+<button class="w-full sm:w-auto bg-primary text-on-primary font-label-md text-label-md px-lg py-sm rounded-full squish-shadow hover:opacity-90 transition-all duration-300 active:scale-95 flex items-center justify-center gap-xs target-primary-bg" onclick="scrollToSection('generator')">
+                        Start Creating <span class="material-symbols-outlined icon-size-18">arrow_forward</span>
+</button>
+<button class="w-full sm:w-auto bg-surface-container-low text-primary font-label-md text-label-md px-lg py-sm rounded-full border border-outline-variant hover:bg-surface-container transition-all duration-300 active:scale-95 target-primary-color" onclick="triggerFeatureNotice('Showcase Gallery')">
+                        View Examples
+                    </button>
+</div>
+</div>
+<div class="w-full md:w-1/2 flex justify-center items-center mt-lg md:mt-0">
+<div class="relative w-[280px] h-[280px] md:w-[350px] md:h-[350px] floating-anim">
+<div class="absolute inset-0 bg-primary-container rounded-[2rem] rotate-6 opacity-30"></div>
+<div class="absolute inset-0 bg-inverse-primary rounded-[2rem] -rotate-3 opacity-40"></div>
+<img alt="Heart-shaped pink QR code preview" class="relative z-10 w-full h-full object-cover rounded-[2rem] shadow-2xl border-4 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRHLcrLukK1X72my9whVDQ-wVObHf4wZNox7eElubpgu5mXbidpLmZ8-XWRyJFJVx8tSTENe5rlr6SyjXuMMYO17iT3ZW1Ov0z_pEScUvPBY32cWk65yjJmpqPEhGRUvHHz2v2p03ksSQwJBApcCNwDf6a0czOBX_AyRH_BgZwNOYPPcw7etNgVxm_jCbkHVdITqbPSTkoxXVCdL2EZSCN-n7Ayj__r4wi-3xwvm1_0BmZ06xXQlnzaXazYukeZmdG4VW5lQL8OKfZ"/>
+<div class="absolute -top-6 -right-6 bg-white p-sm rounded-full shadow-lg z-20 animate-bounce bounce-duration-3s">
+<span id="hero-bounce-icon" class="material-symbols-outlined text-tertiary icon-fill-1 icon-size-32">favorite</span>
+</div>
+</div>
+</div>
+</section>
+
+<section class="w-full max-w-4xl mx-auto py-lg md:py-xl scroll-mt-20" id="generator">
+<div class="glass-card rounded-[2rem] p-lg md:p-xl flex flex-col gap-lg">
+<div class="text-center">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-xs">Let's make something cute!</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Enter your link and customize your design.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+<div class="flex flex-col gap-md">
+<div class="flex flex-col gap-sm">
+<label class="font-label-md text-label-md text-on-surface-variant pl-xs">Destination URL</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-sm top-1/2 transform -translate-y-1/2 text-outline">link</span>
+<input id="text-url" class="w-full bg-primary/5 border-2 border-primary/20 rounded-xl py-sm pl-xl pr-sm font-body-md text-body-md text-on-surface focus:border-primary focus:ring-0 transition-colors placeholder:text-outline-variant outline-none focus:border-primary" placeholder="Enter your link here..." type="url"/>
+</div>
+</div>
+<div class="flex flex-col gap-sm">
+<label class="font-label-md text-label-md text-on-surface-variant pl-xs">Theme Color</label>
+<div class="flex gap-sm">
+<button
+id="btn-pink"
+aria-label="Pink Theme"
+class="w-10 h-10 rounded-full bg-[#ffaeda] ring-2 ring-primary ring-offset-2 transition-all active:scale-90"
+onclick="changeColor(
+'#8a486f',
+'#f9a8d4',
+'#ffaeda',
+this
+)"></button>
+<button
+id="btn-blue" 
+aria-label="Blue Theme" 
+class="w-10 h-10 rounded-full bg-[#a3defe] border border-outline-variant hover:scale-105 transition-all active:scale-90" 
+onclick="changeColor(
+'#2563eb',
+'#93c5fd',
+'#a3defe',
+this
+)"></button>
+<button id="btn-yellow" 
+aria-label="Yellow Theme" 
+class="w-10 h-10 rounded-full bg-[#fde047] border border-outline-variant hover:scale-105 transition-all active:scale-90" 
+onclick="changeColor(
+'#b45309',
+'#fef08a',
+'#fde047',
+this
+)"></button>
+<button id="btn-purple" 
+aria-label="Purple Theme" 
+class="w-10 h-10 rounded-full bg-[#d8b4fe] border border-outline-variant hover:scale-105 transition-all active:scale-90" 
+onclick="changeColor(
+'#6b21a8',
+'#e9d5ff',
+'#d8b4fe',
+this
+)"></button>
+</div>
+</div>
+<div id="shape-selector-group" class="flex flex-wrap gap-sm">
+
+<button
+onclick="changeShape('heart', this)"
+class="bg-secondary text-white rounded-full px-md py-xs font-label-md flex items-center gap-xs border border-secondary squish-shadow target-shape-btn">
+❤️ Heart
+</button>
+
+<button
+onclick="changeShape('star', this)"
+class="bg-surface-container-highest text-on-surface-variant rounded-full px-md py-xs font-label-md flex items-center gap-xs border border-outline-variant/30 target-shape-btn">
+⭐ Star
+</button>
+
+</div>
+
+<div class="flex flex-col gap-sm">
+<label class="font-label-md text-label-md text-on-surface-variant pl-xs">Center Icon</label>
+<div id="icon-selector-group" class="flex flex-wrap gap-sm">
+    <button
+    onclick="changeCenterIcon('favorite', this)"
+    class="w-11 h-11 bg-secondary text-white rounded-full flex items-center justify-center border border-secondary squish-shadow target-icon-btn active:scale-90 transition-transform"
+    title="Love">
+        <span class="material-symbols-outlined icon-size-24 icon-fill-1">favorite</span>
     </button>
-  </div>
+    <button
+    onclick="changeCenterIcon('cruelty_free', this)"
+    class="w-11 h-11 bg-surface-container-highest text-on-surface-variant rounded-full flex items-center justify-center border border-outline-variant/30 target-icon-btn active:scale-90 transition-transform"
+    title="Bunny">
+        <span class="material-symbols-outlined icon-size-24 icon-fill-1">cruelty_free</span>
+    </button>
+    <button
+    onclick="changeCenterIcon('pets', this)"
+    class="w-11 h-11 bg-surface-container-highest text-on-surface-variant rounded-full flex items-center justify-center border border-outline-variant/30 target-icon-btn active:scale-90 transition-transform"
+    title="Cat">
+        <span class="material-symbols-outlined icon-size-24 icon-fill-1">pets</span>
+    </button>
+    <button
+    onclick="changeCenterIcon('child_care', this)"
+    class="w-11 h-11 bg-surface-container-highest text-on-surface-variant rounded-full flex items-center justify-center border border-outline-variant/30 target-icon-btn active:scale-90 transition-transform"
+    title="Bear">
+        <span class="material-symbols-outlined icon-size-24 icon-fill-1">child_care</span>
+    </button>
+    <button
+    onclick="changeCenterIcon('star', this)"
+    class="w-11 h-11 bg-surface-container-highest text-on-surface-variant rounded-full flex items-center justify-center border border-outline-variant/30 target-icon-btn active:scale-90 transition-transform"
+    title="Star">
+        <span class="material-symbols-outlined icon-size-24 icon-fill-1">star</span>
+    </button>
+    <button
+    onclick="changeCenterIcon('flutter_dash', this)"
+    class="w-11 h-11 bg-surface-container-highest text-on-surface-variant rounded-full flex items-center justify-center border border-outline-variant/30 target-icon-btn active:scale-90 transition-transform"
+    title="Bird">
+        <span class="material-symbols-outlined icon-size-24 icon-fill-1">flutter_dash</span>
+    </button>
+    <button
+    onclick="changeCenterIcon('filter_drama', this)"
+    class="w-11 h-11 bg-surface-container-highest text-on-surface-variant rounded-full flex items-center justify-center border border-outline-variant/30 target-icon-btn active:scale-90 transition-transform"
+    title="Cloud">
+        <span class="material-symbols-outlined icon-size-24 icon-fill-1">filter_drama</span>
+    </button>
+</div>
+</div>
+<div class="flex flex-col gap-sm mt-sm">
+<button onclick="generate()" class="w-full bg-primary text-on-primary font-headline-md text-body-md md:text-headline-md py-sm rounded-full squish-shadow hover:opacity-90 transition-all duration-300 active:scale-95 flex justify-center items-center gap-sm target-primary-bg">
+<span class="material-symbols-outlined">qr_code_2</span> Generate QR
+                            </button>
+<button id="download-btn" onclick="downloadQR()" class="w-full bg-surface-container-low text-primary font-label-md text-label-md py-sm rounded-full border border-outline-variant hover:bg-surface-container transition-all duration-300 active:scale-95 flex justify-center items-center gap-xs hidden target-primary-color">
+<span class="material-symbols-outlined">download</span> Download QR
+                            </button>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-2xl p-md flex flex-col items-center justify-center border border-white/50 relative overflow-hidden min-h-[340px]">
+<div class="absolute inset-0 opacity-20 radial-dots"></div>
+                        
+                        <div id="preview-placeholder" class="relative z-10 text-center flex flex-col items-center gap-sm opacity-50">
+                            <span class="material-symbols-outlined icon-size-64 text-primary target-primary-color">qr_code_scanner</span>
+                            <p class="font-body-md text-label-md text-on-surface-variant">Live preview will appear here</p>
+                        </div>
 
-  <script>
-    let qr = null;
+                        <div id="preview-active" class="preview-container hidden">
+                            <img id="heart-source" alt="Heart Background" class="w-full h-full object-cover block" src="heart-pink.png"/>
+                            <div
+    id="qrcode-preview"
+    class="absolute bg-white flex items-center justify-center shadow-md overflow-hidden">
+</div>
+                        </div>
+</div>
+</div>
+</div>
+</section>
+</main>
 
-    function generateLoveQR() {
-      const text = document.getElementById("qr-input").value.trim();
-      const container = document.getElementById("qrcode");
+<footer class="w-full py-lg bg-surface-container-low dark:bg-surface-dim border-t border-outline-variant/30 mt-auto relative z-20">
+<div class="flex flex-col md:flex-row justify-between items-center px-margin max-w-7xl mx-auto gap-md">
+<span class="font-headline-md text-headline-md text-primary target-primary-text">HeartScan</span>
+<div class="flex flex-wrap justify-center gap-md">
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-all" href="#" onclick="triggerFeatureNotice('Privacy Policy')">Privacy Policy</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-all" href="#" onclick="triggerFeatureNotice('Terms of Service')">Terms of Service</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-all" href="#" onclick="triggerFeatureNotice('Support Desk')">Support</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-all" href="#" onclick="triggerFeatureNotice('Contact Form')">Contact Us</a>
+</div>
+<span class="font-body-md text-body-md text-secondary dark:text-secondary-fixed-dim text-center md:text-right">Made with Love by HeartScan © 2026</span>
+</div>
+</footer>
 
-      if (!text) {
-        alert("Masukkan teks atau URL dulu ya!");
-        return;
+<script>
+let currentQRColor = "#ffaeda"; // Kembalikan warna soft pink asal sebagai default
+let currentShape = "heart";
+let currentHeartImage = "heart-pink.png";
+let currentCenterIcon = "favorite"; 
+
+function updatePreviewPosition() {
+  const qr = document.getElementById("qrcode-preview");
+  const config = {
+    heart: { top: "25.61%", left: "29%", size: "41.99%" },
+    star: { top: "30.08%", left: "29%", size: "41.99%" }
+  };
+  const c = config[currentShape];
+  qr.style.position = "absolute";
+  qr.style.top = c.top;
+  qr.style.left = c.left;
+  qr.style.width = c.size;
+  qr.style.height = c.size;
+}
+
+const qrPositions = {
+  heart: { x: 594, y: 524.5, width: 860, height: 855 },
+  star: { x: 594, y: 616, width: 860, height: 855 }
+}; 
+
+function scrollToSection(id) {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+}
+
+function triggerFeatureNotice(featureName) {
+  alert(`Fungsi "${featureName}" ini adalah sebahagian daripada simulasi paparan halaman UI.`);
+}
+
+function triggerSignIn() {
+  const name = prompt("Sila masukkan nama anda untuk Log Masuk:");
+  if (name) alert(`Selamat kembali, ${name}! Log masuk berjaya.`);
+}
+
+function changeColor(primaryHex, secondaryHex, qrDarkHex, selectedButton) {
+  document.documentElement.style.setProperty('--theme-primary', primaryHex);
+  document.documentElement.style.setProperty('--theme-secondary', secondaryHex);
+  
+  // Memastikan kod warna matriks QR code mengikut warna soft pastel asal semula (qrDarkHex)
+  currentQRColor = qrDarkHex; 
+
+  document.querySelectorAll('.target-primary-bg').forEach(el=> el.style.backgroundColor = primaryHex);
+  document.querySelectorAll('.target-primary-text').forEach(el=> el.style.color = primaryHex);
+  document.querySelectorAll('.target-primary-color').forEach(el=> el.style.color = primaryHex);
+  document.querySelectorAll('.target-primary-border').forEach(el=> el.style.borderColor = primaryHex);
+
+  const buttons = selectedButton.parentElement.querySelectorAll('button');
+  buttons.forEach(btn=> btn.classList.remove('ring-2', 'ring-primary', 'ring-offset-2'));
+  selectedButton.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+
+  updateShapeImage();
+  if (document.getElementById("text-url").value && !document.getElementById("preview-active").classList.contains("hidden")) {
+    generate();
+  }
+}
+
+function changeCenterIcon(iconName, selectedButton) {
+  currentCenterIcon = iconName; 
+  const heroIcon = document.getElementById("hero-bounce-icon");
+  heroIcon.textContent = iconName;
+
+  const buttons = document.querySelectorAll('.target-icon-btn');
+  buttons.forEach(btn => {
+    btn.className = "w-11 h-11 bg-surface-container-highest text-on-surface-variant rounded-full flex items-center justify-center border border-outline-variant/30 target-icon-btn active:scale-90 transition-transform";
+  });
+  selectedButton.className = "w-11 h-11 bg-secondary text-white rounded-full flex items-center justify-center border border-secondary squish-shadow target-icon-btn active:scale-90 transition-transform";
+
+  if (document.getElementById("text-url").value && !document.getElementById("preview-active").classList.contains("hidden")) {
+    generate();
+  }
+}
+
+const iconUrls = {
+  'favorite': 'https://api.iconify.design/mdi:heart.svg',
+  'cruelty_free': 'https://api.iconify.design/mdi:rabbit.svg',
+  'pets': 'https://api.iconify.design/mdi:cat.svg',
+  'child_care': 'https://api.iconify.design/mdi:bear.svg',
+  'star': 'https://api.iconify.design/mdi:star.svg',
+  'flutter_dash': 'https://api.iconify.design/mdi:bird.svg',
+  'filter_drama': 'https://api.iconify.design/mdi:cloud.svg'
+};
+
+function generateSVGQR(text, size) {
+  const qr = qrcode(0, 'H');
+  qr.addData(text);
+  qr.make();
+
+  const count = qr.getModuleCount();
+  const cellSize = size / count;
+  
+  let svgTag = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="background:#fff;">`;
+  
+  for (let row = 0; row < count; row++) {
+    for (let col = 0; col < count; col++) {
+      if (qr.isDark(row, col)) {
+        const x = col * cellSize;
+        const y = row * cellSize;
+        svgTag += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="${currentQRColor}" />`;
       }
-
-      // Bersihkan QR sedia ada
-      container.innerHTML = "";
-
-      // Bina semula QR Code saiz padat di dalam mask
-      qr = new QRCode(container, {
-        text: text,
-        width: 250,
-        height: 250,
-        colorDark: "#be123c", // Setkan warna merah gelap (rose-700) untuk QR supaya lebih bertema & mudah dikesan
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H // Level H (High) supaya kod QR tetap senang diimbas walaupun dibentuk hati
-      });
     }
+  }
 
-    function downloadLoveQR() {
-      const captureArea = document.getElementById("capture-area");
+  const center = size / 2;
+  const iconSize = size * 0.22;
+  const bgRadius = (iconSize * 1.35) / 2;
+  
+  svgTag += `<circle cx="${center}" cy="${center}" r="${bgRadius}" fill="#ffffff" />`;
+  
+  const cleanColor = currentQRColor.replace('#', '');
+  const finalIconPath = `${iconUrls[currentCenterIcon]}?color=${cleanColor}`;
+  
+  svgTag += `<image href="${finalIconPath}" x="${center - iconSize/2}" y="${center - iconSize/2}" width="${iconSize}" height="${iconSize}" />`;
+  svgTag += `</svg>`;
+  
+  return svgTag;
+}
 
-      // Menggunakan html2canvas untuk 'snapshot' elemen yang ada bentuk hati tadi
-      html2canvas(captureArea, {
-        useCORS: true, 
-        backgroundColor: null, // Transparent background atau kekalkan putih di dalam canvas
-        scale: 3 // Meningkatkan resolusi muat turun supaya tidak pecah / kabur
-      }).then(canvas => {
-        // Tukar canvas html2canvas kepada imej PNG
-        const imgData = canvas.toDataURL("image/png");
+function generate() {
+  const text = document.getElementById("text-url").value;
+  if (!text) return alert("Sila masukkan teks atau alamat URL terlebih dahulu!");
 
-        // Proses muat turun
-        const a = document.createElement("a");
-        a.href = imgData;
-        a.download = "love-qrcode.png";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }).catch(err => {
-        console.error("Gagal muat turun:", err);
-        alert("Maaf, gagal memproses bentuk hati untuk muat turun. Cuba sebentar lagi.");
-      });
-    }
+  document.getElementById("preview-placeholder").classList.add("hidden");
+  document.getElementById("preview-active").classList.remove("hidden");
 
-    // Jana secara automatik bila sedia
-    window.addEventListener("DOMContentLoaded", () => {
-      generateLoveQR();
-    });
-  </script>
+  const qrDiv = document.getElementById("qrcode-preview");
+  qrDiv.innerHTML = generateSVGQR(text, 250);
+
+  document.getElementById("download-btn").classList.remove("hidden");
+  updatePreviewPosition();
+}
+
+function downloadQR() {
+  const qrDiv = document.getElementById("qrcode-preview");
+  if (!qrDiv.querySelector("svg")) return alert("Sila jana kod QR terlebih dahulu!");
+
+  const text = document.getElementById("text-url").value;
+  const hdSvgString = generateSVGQR(text, 860);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 2048;
+  canvas.height = 2048;
+  const ctx = canvas.getContext("2d");
+
+  const heartImg = new Image();
+  heartImg.src = currentHeartImage;
+
+  heartImg.onload = () => {
+    const cornerRadius = 120;
+    ctx.beginPath();
+    ctx.moveTo(cornerRadius, 0);
+    ctx.lineTo(2048 - cornerRadius, 0);
+    ctx.quadraticCurveTo(2048, 0, 2048, cornerRadius);
+    ctx.lineTo(2048, 2048 - cornerRadius);
+    ctx.quadraticCurveTo(2048, 2048, 2048 - cornerRadius, 2048);
+    ctx.lineTo(cornerRadius, 2048);
+    ctx.quadraticCurveTo(0, 2048, 0, 2048 - cornerRadius);
+    ctx.lineTo(0, cornerRadius);
+    ctx.quadraticCurveTo(0, 0, cornerRadius, 0);
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.drawImage(heartImg, 0, 0, 2048, 2048);
+
+    const config = qrPositions[currentShape];
+    ctx.fillStyle = "white";
+    ctx.fillRect(config.x, config.y, config.width, config.height);
+
+    const svgBlob = new Blob([hdSvgString], {type: "image/svg+xml;charset=utf-8"});
+    const url = URL.createObjectURL(svgBlob);
+    
+    const imgQr = new Image();
+    imgQr.src = url;
+    imgQr.onload = () => {
+      ctx.drawImage(imgQr, config.x, config.y, config.width, config.height);
+      
+      // Pembetulan CORS muat turun: Imej luaran dimuatkan secara asing agar melekat pada cetakan PNG
+      const iconImg = new Image();
+      iconImg.crossOrigin = "anonymous"; 
+      
+      const cleanColor = currentQRColor.replace('#', '');
+      iconImg.src = `${iconUrls[currentCenterIcon]}?color=${cleanColor}`;
+      
+      iconImg.onload = () => {
+        const qrCenterX = config.x + (config.width / 2);
+        const qrCenterY = config.y + (config.height / 2);
+        const iconSizeHD = config.width * 0.22;
+        const bgRadiusHD = (iconSizeHD * 1.35) / 2;
+        
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(qrCenterX, qrCenterY, bgRadiusHD, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        ctx.drawImage(
+          iconImg, 
+          qrCenterX - (iconSizeHD / 2), 
+          qrCenterY - (iconSizeHD / 2), 
+          iconSizeHD, 
+          iconSizeHD
+        );
+        
+        const link = document.createElement("a");
+        link.download = "heartscan-qr-hd.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        URL.revokeObjectURL(url);
+      };
+    };
+  };
+}
+
+function changeShape(shape, selectedButton) {
+  currentShape = shape;
+  const buttons = document.querySelectorAll('.target-shape-btn');
+  buttons.forEach(btn=> {
+    btn.className = "bg-surface-container-highest text-on-surface-variant rounded-full px-md py-xs font-label-md flex items-center gap-xs border border-outline-variant/30 target-shape-btn";
+  });
+  selectedButton.className = "bg-secondary text-white rounded-full flex items-center justify-center border border-secondary squish-shadow target-shape-btn";
+
+  updateShapeImage();
+  updatePreviewPosition();
+  if (document.getElementById("text-url").value && !document.getElementById("preview-active").classList.contains("hidden")) {
+    generate();
+  }
+}
+
+// Menyelaraskan semula semakan kata kunci berasaskan kod warna soft pastel yang betul
+function updateShapeImage() {
+  let color = "pink";
+  if (currentQRColor === "#a3defe") color = "blue";
+  else if (currentQRColor === "#fde047") color = "yellow";
+  else if (currentQRColor === "#d8b4fe") color = "purple";
+
+  currentHeartImage = `${currentShape}-${color}.png`;
+  document.getElementById("heart-source").src = currentHeartImage;
+}
+
+window.onload = () => {
+  updateShapeImage();
+  updatePreviewPosition();
+};
+</script>
+
 </body>
 </html>
