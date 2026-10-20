@@ -533,23 +533,31 @@ function generate() {
   updatePreviewPosition();
 }
 
-function downloadQR() {
+async function downloadQR() {
   const qrDiv = document.getElementById("qrcode-preview");
   if (!qrDiv.querySelector("svg")) return alert("Sila jana kod QR terlebih dahulu!");
 
   const text = document.getElementById("text-url").value;
-  const hdSvgString = generateSVGQR(text, 860);
+  if (!text) return alert("Sila masukkan teks atau URL terlebih dahulu!");
 
   const canvas = document.createElement("canvas");
   canvas.width = 2048;
   canvas.height = 2048;
   const ctx = canvas.getContext("2d");
 
+  // 1. Muatkan imej latar belakang Heart/Star
   const heartImg = new Image();
   heartImg.src = currentHeartImage;
 
-  heartImg.onload = () => {
+  try {
+    await new Promise((resolve, reject) => {
+      heartImg.onload = resolve;
+      heartImg.onerror = () => reject("Gagal memuatkan imej latar bentuk.");
+    });
+
+    // Lukis sudut bulat dan bingkai luaran
     const cornerRadius = 120;
+    ctx.save();
     ctx.beginPath();
     ctx.moveTo(cornerRadius, 0);
     ctx.lineTo(2048 - cornerRadius, 0);
@@ -564,53 +572,85 @@ function downloadQR() {
     ctx.clip();
 
     ctx.drawImage(heartImg, 0, 0, 2048, 2048);
+    ctx.restore();
 
+    // 2. Lukis matriks modul QR Code secara terus ke Canvas (Elak isu SVG Blob Tainted)
     const config = qrPositions[currentShape];
-    ctx.fillStyle = "white";
+    const qr = qrcode(0, 'H');
+    qr.addData(text);
+    qr.make();
+
+    const count = qr.getModuleCount();
+    const cellSize = config.width / count;
+
+    // Latar belakang putih untuk zon kod QR
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(config.x, config.y, config.width, config.height);
 
-    const svgBlob = new Blob([hdSvgString], {type: "image/svg+xml;charset=utf-8"});
-    const url = URL.createObjectURL(svgBlob);
+    // Lukis sel-sel kod QR
+    ctx.fillStyle = currentQRColor;
+    for (let row = 0; row < count; row++) {
+      for (let col = 0; col < count; col++) {
+        if (qr.isDark(row, col)) {
+          ctx.fillRect(
+            config.x + (col * cellSize),
+            config.y + (row * cellSize),
+            cellSize + 0.5, // Tambah 0.5 untuk elak garis halus celah modul
+            cellSize + 0.5
+          );
+        }
+      }
+    }
+
+    // 3. Lukis bulatan putih di tengah-tengah QR
+    const qrCenterX = config.x + (config.width / 2);
+    const qrCenterY = config.y + (config.height / 2);
+    const iconSizeHD = config.width * 0.22;
+    const bgRadiusHD = (iconSizeHD * 1.35) / 2;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(qrCenterX, qrCenterY, bgRadiusHD, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // 4. Ambil ikon SVG dan tukar kepada format selamat (CORS Safe)
+    const cleanColor = currentQRColor.replace('#', '');
+    const iconUrl = `${iconUrls[currentCenterIcon]}?color=${cleanColor}`;
+
+    const iconImg = new Image();
+    iconImg.crossOrigin = "anonymous";
     
-    const imgQr = new Image();
-    imgQr.src = url;
-    imgQr.onload = () => {
-      ctx.drawImage(imgQr, config.x, config.y, config.width, config.height);
-      
-      // Pembetulan CORS muat turun: Imej luaran dimuatkan secara asing agar melekat pada cetakan PNG
-      const iconImg = new Image();
-      iconImg.crossOrigin = "anonymous"; 
-      
-      const cleanColor = currentQRColor.replace('#', '');
-      iconImg.src = `${iconUrls[currentCenterIcon]}?color=${cleanColor}`;
-      
-      iconImg.onload = () => {
-        const qrCenterX = config.x + (config.width / 2);
-        const qrCenterY = config.y + (config.height / 2);
-        const iconSizeHD = config.width * 0.22;
-        const bgRadiusHD = (iconSizeHD * 1.35) / 2;
-        
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.arc(qrCenterX, qrCenterY, bgRadiusHD, 0, 2 * Math.PI);
-        ctx.fill();
-        
-        ctx.drawImage(
-          iconImg, 
-          qrCenterX - (iconSizeHD / 2), 
-          qrCenterY - (iconSizeHD / 2), 
-          iconSizeHD, 
-          iconSizeHD
-        );
-        
-        const link = document.createElement("a");
-        link.download = "heartscan-qr-hd.png";
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-        URL.revokeObjectURL(url);
-      };
-    };
-  };
+    // Gunakan fetch untuk muat turun teks SVG secara sah sebelum dijadikan DataURL
+    const svgRes = await fetch(iconUrl);
+    const svgText = await svgRes.text();
+    const svgBase64 = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgText)));
+
+    await new Promise((resolve, reject) => {
+      iconImg.onload = resolve;
+      iconImg.onerror = reject;
+      iconImg.src = svgBase64;
+    });
+
+    ctx.drawImage(
+      iconImg,
+      qrCenterX - (iconSizeHD / 2),
+      qrCenterY - (iconSizeHD / 2),
+      iconSizeHD,
+      iconSizeHD
+    );
+
+    // 5. Muat turun fail imej PNG yang telah siap dicantumkan
+    const link = document.createElement("a");
+    link.download = `heartscan-${currentShape}-${Date.now()}.png`;
+    link.href = canvas.toDataURL("image/png");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+  } catch (error) {
+    console.error("Ralat semasa muat turun:", error);
+    alert("Gagal memuat turun kod QR. Sila pastikan sambungan internet aktif untuk memuatkan ikon.");
+  }
 }
 
 function changeShape(shape, selectedButton) {
