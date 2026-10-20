@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>QR Code Generator & Downloader</title>
+  <title>Love QR Code Generator & Downloader</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -11,120 +11,193 @@
   <!-- QRCode.js Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-  <!-- Iconify CDN (Menggantikan fail mdi:heart.svg tempatan untuk elak 404) -->
+  <!-- html2canvas: Paling penting untuk membolehkan muat turun bentuk hati (capture design) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Iconify CDN (Menggantikan fail mdi:heart.svg tempatan untuk elak ralat 404) -->
   <script src="https://code.iconify.design/iconify-icon/1.0.8/iconify-icon.min.js"></script>
+
+  <style>
+    /* Rekabentuk Masking & Kesan Bentuk Hati (Love QR) */
+    .heart-container {
+      position: relative;
+      width: 260px;
+      height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      padding: 20px;
+      border-radius: 24px;
+      box-shadow: 0 10px 25px rgba(244, 63, 94, 0.15);
+    }
+
+    .heart-mask {
+      width: 220px;
+      height: 220px;
+      position: relative;
+      /* Topeng bentuk hati untuk memotong kod QR biasa menjadi bentuk "Love" */
+      clip-path: url(#heart-clip);
+      -webkit-clip-path: url(#heart-clip);
+      background-color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Memastikan QR Code yang dijana memenuhi ruang bentuk hati */
+    #qrcode canvas, #qrcode img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover;
+    }
+
+    /* Frame hiasan luar berbentuk hati (outline merah) */
+    .heart-border-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+  </style>
 </head>
-<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-rose-50 min-h-screen flex items-center justify-center p-4">
 
-  <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-slate-200">
+  <!-- SVG ClipPath & Overlay (Sangat kritikal untuk membentuk & menghias Love QR) -->
+  <svg width="0" height="0" style="position: absolute;">
+    <defs>
+      <!-- Skala 0.0036 digunakan untuk menyesuaikan koordinat path kepada saiz 220px secara dinamik -->
+      <clipPath id="heart-clip" clipPathUnits="objectBoundingBox">
+        <path d="M0.5,0.92 C0.43,0.85 0.03,0.52 0.01,0.32 C-0.02,0.14 0.11,0 0.28,0 C0.39,0 0.46,0.06 0.5,0.12 C0.54,0.06 0.61,0 0.72,0 C0.89,0 1.02,0.14 0.99,0.32 C0.97,0.52 0.57,0.85 0.5,0.92 Z" />
+      </clipPath>
+    </defs>
+  </svg>
+
+  <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-xl max-w-md w-full text-center border border-rose-100">
+    <!-- Header -->
     <div class="flex items-center justify-center gap-2 mb-2">
-      <h1 class="text-2xl font-bold text-slate-800">Penjana Kod QR</h1>
-      <iconify-icon icon="mdi:heart" class="text-rose-500 text-2xl inline-block"></iconify-icon>
+      <h1 class="text-2xl font-black text-rose-600 tracking-tight">KOD QR LOVE</h1>
+      <iconify-icon icon="mdi:heart" class="text-rose-500 text-3xl animate-pulse"></iconify-icon>
     </div>
-    <p class="text-sm text-slate-500 mb-6">Masukkan pautan atau teks untuk menjana dan memuat turun kod QR anda.</p>
+    <p class="text-xs text-slate-500 mb-6 font-medium">Jana dan muat turun kod QR romantis berbentuk hati anda.</p>
 
+    <!-- Ruang Input & Butang -->
     <div class="space-y-4 text-left">
       <div>
-        <label for="qr-input" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-          Teks / URL
+        <label for="qr-input" class="block text-[11px] font-bold uppercase tracking-wider text-rose-500 mb-1">
+          Pautan / Teks Utama
         </label>
         <input 
           type="text" 
           id="qr-input" 
-          placeholder="https://contoh.com" 
-          value="https://github.com"
-          class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+          placeholder="https://kekasihmu.com" 
+          value="https://github.com/imaninaramly/qrcode"
+          class="w-full px-4 py-2.5 rounded-xl border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-sm bg-rose-50/30"
         />
       </div>
 
       <button 
         type="button"
-        onclick="generateQRCode()" 
-        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition duration-150 shadow-sm"
+        onclick="generateLoveQR()" 
+        class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-4 rounded-xl transition duration-200 shadow-md shadow-rose-200 text-sm"
       >
-        Jana Kod QR
+        Jana Kod QR Love ❤️
       </button>
     </div>
 
-    <!-- Kotak Paparan QR Code -->
-    <div class="my-6 p-4 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex items-center justify-center min-h-[240px]">
-      <div id="qrcode" class="flex items-center justify-center"></div>
+    <!-- Kotak Paparan & Cetakan Gambar Love QR Code -->
+    <div class="my-6 flex items-center justify-center">
+      <!-- DOM Element ini yang akan ditangkap (screenshot) oleh html2canvas untuk dimuat turun -->
+      <div id="capture-area" class="heart-container">
+        <!-- Bingkai SVG Merah Jambu Hati di Luar QR -->
+        <svg class="heart-border-svg" viewBox="0 0 100 100">
+          <path d="M50,90 C43,83 3,50 1,30 C-2,12 11,0 28,0 C39,0 46,6 50,12 C54,6 61,0 72,0 C89,0 102,12 99,30 C97,50 57,83 50,90 Z" 
+                fill="none" 
+                stroke="#f43f5e" 
+                stroke-width="5" 
+                stroke-linejoin="round"
+                transform="scale(0.85) translate(8, 8)" />
+        </svg>
+        
+        <!-- Masking di dalam untuk memotong QR menjadi bentuk hati -->
+        <div class="heart-mask">
+          <div id="qrcode" class="w-full h-full flex items-center justify-center"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Butang Download -->
     <button 
       type="button"
       id="btn-download"
-      onclick="downloadQRCode()" 
-      class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-lg transition duration-150 shadow-sm flex items-center justify-center gap-2"
+      onclick="downloadLoveQR()" 
+      class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-4 rounded-xl transition duration-200 shadow-lg flex items-center justify-center gap-2 text-sm"
     >
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
       </svg>
-      Muat Turun Kod QR (PNG)
+      Muat Turun Gambar (PNG)
     </button>
   </div>
 
   <script>
     let qr = null;
 
-    function generateQRCode() {
+    function generateLoveQR() {
       const text = document.getElementById("qr-input").value.trim();
       const container = document.getElementById("qrcode");
 
       if (!text) {
-        alert("Sila masukkan teks atau URL terlebih dahulu.");
+        alert("Masukkan teks atau URL dulu ya!");
         return;
       }
 
-      // Kosongkan kod QR sedia ada
+      // Bersihkan QR sedia ada
       container.innerHTML = "";
 
-      // Bina QR Code baru
+      // Bina semula QR Code saiz padat di dalam mask
       qr = new QRCode(container, {
         text: text,
-        width: 200,
-        height: 200,
-        colorDark: "#000000",
+        width: 250,
+        height: 250,
+        colorDark: "#be123c", // Setkan warna merah gelap (rose-700) untuk QR supaya lebih bertema & mudah dikesan
         colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
+        correctLevel: QRCode.CorrectLevel.H // Level H (High) supaya kod QR tetap senang diimbas walaupun dibentuk hati
       });
     }
 
-    function downloadQRCode() {
-      const container = document.getElementById("qrcode");
-      
-      // Ambil rujukan canvas atau img yang dihasilkan oleh pustaka
-      const canvas = container.querySelector("canvas");
-      const img = container.querySelector("img");
+    function downloadLoveQR() {
+      const captureArea = document.getElementById("capture-area");
 
-      let downloadUrl = "";
+      // Menggunakan html2canvas untuk 'snapshot' elemen yang ada bentuk hati tadi
+      html2canvas(captureArea, {
+        useCORS: true, 
+        backgroundColor: null, // Transparent background atau kekalkan putih di dalam canvas
+        scale: 3 // Meningkatkan resolusi muat turun supaya tidak pecah / kabur
+      }).then(canvas => {
+        // Tukar canvas html2canvas kepada imej PNG
+        const imgData = canvas.toDataURL("image/png");
 
-      if (canvas) {
-        // Ambil terus dari canvas jika tersedia
-        downloadUrl = canvas.toDataURL("image/png");
-      } else if (img && img.src) {
-        // Jika pustaka menjana elemen img
-        downloadUrl = img.src;
-      }
-
-      if (!downloadUrl) {
-        alert("Sila jana kod QR terlebih dahulu sebelum memuat turun.");
-        return;
-      }
-
-      // Cipta elemen pautan sementara dan laksanakan muat turun
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = "qrcode.png";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+        // Proses muat turun
+        const a = document.createElement("a");
+        a.href = imgData;
+        a.download = "love-qrcode.png";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }).catch(err => {
+        console.error("Gagal muat turun:", err);
+        alert("Maaf, gagal memproses bentuk hati untuk muat turun. Cuba sebentar lagi.");
+      });
     }
 
-    // Jana secara automatik semasa laman mula dibuka
+    // Jana secara automatik bila sedia
     window.addEventListener("DOMContentLoaded", () => {
-      generateQRCode();
+      generateLoveQR();
     });
   </script>
 </body>
